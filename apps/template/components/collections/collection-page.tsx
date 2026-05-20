@@ -16,37 +16,28 @@ import { Container } from "@/components/ui/container";
 import { Page } from "@/components/ui/page";
 import { Sections } from "@/components/ui/sections";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  type CollectionSearchState,
-  getCollectionResultsData,
-  getCollectionSearchState,
-} from "@/lib/collections/server";
+import type { CollectionResultsData, CollectionSearchState } from "@/lib/collections/server";
 import type { Locale } from "@/lib/i18n";
-import type { getCollection } from "@/lib/shopify/operations/collections";
+import type { Collection } from "@/lib/types";
 
 import { FilterPendingScope, FilterTransitionProvider } from "./filter-pending-context";
 
 export async function CollectionDetailPage({
   handlePromise,
   collectionPromise,
+  collectionResultsDataPromise,
   locale,
-  searchParams,
+  searchStatePromise,
 }: {
   handlePromise: Promise<string>;
-  collectionPromise: Promise<Awaited<ReturnType<typeof getCollection>>>;
+  collectionPromise: Promise<Collection | undefined>;
+  collectionResultsDataPromise: Promise<CollectionResultsData>;
   locale: Locale;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchStatePromise: Promise<CollectionSearchState>;
 }) {
   const tSearch = await getTranslations("search");
   const filtersLabel = tSearch("filters");
   const sortByLabel = tSearch("sortBy");
-
-  const searchStatePromise = getCollectionSearchState(searchParams);
-  const collectionResultsDataPromise = getCollectionResultsData({
-    handlePromise,
-    locale,
-    searchStatePromise,
-  });
 
   return (
     <FilterTransitionProvider>
@@ -105,7 +96,7 @@ async function CollectionHeader({
   collectionPromise,
   handlePromise,
 }: {
-  collectionPromise: Promise<Awaited<ReturnType<typeof getCollection>>>;
+  collectionPromise: Promise<Collection | undefined>;
   handlePromise: Promise<string>;
 }) {
   const [collection, handle, t] = await Promise.all([

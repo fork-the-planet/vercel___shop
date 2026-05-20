@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CollectionDetailPage } from "@/components/collections/collection-page";
+import { getCollectionResultsData, getCollectionSearchState } from "@/lib/collections/server";
 import { getLocale } from "@/lib/params";
 import { buildAlternates, buildOpenGraph } from "@/lib/seo";
 import { getCollection, getCollections } from "@/lib/shopify/operations/collections";
@@ -84,17 +85,23 @@ export default async function CollectionPage({
   params,
   searchParams,
 }: PageProps<"/collections/[handle]">) {
-  const [locale] = await Promise.all([getLocale()]);
+  const locale = await getLocale();
   const handlePromise = params.then(({ handle }) => handle);
-
   const collectionPromise = handlePromise.then((handle) => getCollection(handle, locale));
+  const searchStatePromise = getCollectionSearchState(searchParams);
+  const collectionResultsDataPromise = getCollectionResultsData({
+    handlePromise,
+    locale,
+    searchStatePromise,
+  });
 
   return (
     <CollectionDetailPage
       handlePromise={handlePromise}
       collectionPromise={collectionPromise}
+      collectionResultsDataPromise={collectionResultsDataPromise}
       locale={locale}
-      searchParams={searchParams}
+      searchStatePromise={searchStatePromise}
     />
   );
 }

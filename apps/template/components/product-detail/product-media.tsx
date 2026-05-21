@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { AutoPlayVideo } from "@/components/ui/auto-play-video";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Image as ImageType, Video } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -250,7 +251,6 @@ function Grid({
         {children}
         {mediaItems.map((item, idx) => {
           const priority = !hasColorSlot && idx === 0;
-          const eager = hasColorSlot ? idx === 0 : idx === 1;
           return (
             <GridItem
               key={mediaKey(item)}
@@ -258,7 +258,7 @@ function Grid({
               title={title}
               idx={idx}
               priority={priority}
-              eager={eager}
+              eager
             />
           );
         })}
@@ -279,7 +279,7 @@ export function ColorImageGrid({ images, title }: { images: ImageType[]; title: 
       title={title}
       idx={idx}
       priority={idx === 0}
-      eager={idx === 1}
+      eager
     />
   ));
 }
@@ -310,6 +310,24 @@ export function ColorImageCarouselItems({ images, title }: { images: ImageType[]
       </div>
     );
   });
+}
+
+export function ProductMediaSkeleton({ className }: { className?: string }) {
+  const tile = "w-full rounded-none aspect-square";
+  return (
+    <div className={className}>
+      <div className="grid gap-5 lg:hidden -mx-5">
+        <Skeleton className={tile} />
+        <div className="h-1.5" />
+      </div>
+      <div className="hidden lg:grid grid-cols-2 gap-2.5">
+        <Skeleton className={tile} />
+        <Skeleton className={tile} />
+        <Skeleton className={tile} />
+        <Skeleton className={tile} />
+      </div>
+    </div>
+  );
 }
 
 export function ProductMedia({

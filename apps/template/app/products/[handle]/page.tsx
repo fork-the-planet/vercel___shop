@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ProductDetailPage } from "@/components/product-detail/product-detail-page";
+import { ProductDetailSection } from "@/components/product-detail/product-detail-section";
+import { RelatedProductsSection } from "@/components/product/related-products-section";
+import { Container } from "@/components/ui/container";
+import { Page } from "@/components/ui/page";
+import { Sections } from "@/components/ui/sections";
 import { getLocale } from "@/lib/params";
+import { computeSelection } from "@/lib/product";
 import { buildAlternates, buildOpenGraph } from "@/lib/seo";
 import { getCatalogProducts, getProduct } from "@/lib/shopify/operations/products";
 
@@ -81,11 +86,22 @@ export default async function ProductPage({
 
   const variantIdPromise = searchParams.then((sp) => sp?.variant as string | undefined);
 
+  const selectionPromise = Promise.all([productPromise, variantIdPromise]).then(
+    ([product, variantId]) => computeSelection(product, variantId),
+  );
+
   return (
-    <ProductDetailPage
-      productPromise={productPromise}
-      locale={locale}
-      variantIdPromise={variantIdPromise}
-    />
+    <Page className="pt-0">
+      <Container className="bg-background">
+        <Sections>
+          <ProductDetailSection
+            productPromise={productPromise}
+            selectionPromise={selectionPromise}
+            locale={locale}
+          />
+          <RelatedProductsSection handle={handlePromise} locale={locale} />
+        </Sections>
+      </Container>
+    </Page>
   );
 }

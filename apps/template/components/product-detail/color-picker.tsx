@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 import type * as React from "react";
@@ -6,12 +7,15 @@ import { type SelectedOptions, getVariantUrl } from "@/lib/product";
 import type { ProductOption, ProductVariant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+export type ProductTranslator = Awaited<ReturnType<typeof getTranslations<"product">>>;
+
 interface ColorPickerProps extends React.ComponentProps<"div"> {
   option: ProductOption;
   selectedValue: string;
   variants: ProductVariant[];
   handle: string;
   selectedOptions: SelectedOptions;
+  t: ProductTranslator;
   hideImages?: boolean;
 }
 
@@ -21,6 +25,7 @@ export function ColorPicker({
   variants,
   handle,
   selectedOptions,
+  t,
   hideImages,
   className,
   ...props
@@ -61,7 +66,7 @@ export function ColorPicker({
                   src={imageUrl}
                   width={200}
                   height={200}
-                  alt={`${value.name} swatch`}
+                  alt={t("swatchAlt", { value: value.name })}
                   className="size-full object-cover"
                 />
               ) : (
@@ -78,7 +83,7 @@ export function ColorPicker({
               <span
                 key={value.id}
                 className="block opacity-40 cursor-not-allowed"
-                aria-label={`${option.name}: ${value.name} (unavailable)`}
+                aria-label={t("unavailableVariantLabel", { name: option.name, value: value.name })}
               >
                 {swatch}
               </span>
@@ -91,7 +96,7 @@ export function ColorPicker({
               href={href}
               scroll={false}
               className="block"
-              aria-label={`Select ${option.name}: ${value.name}`}
+              aria-label={t("selectVariantLabel", { name: option.name, value: value.name })}
             >
               {swatch}
             </Link>

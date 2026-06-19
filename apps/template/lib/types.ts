@@ -96,11 +96,36 @@ export interface ProductDetails extends ProductCard {
 
 export interface ProductVariant {
   availableForSale: boolean;
+  /** Bundle variants this variant is a component of (Shopify `groupedBy`); empty for non-components. */
+  bundleParents: ProductVariantReference[];
   compareAtPrice?: Money;
+  /** Fixed-bundle contents (Shopify `components`); empty unless this is a bundle variant. */
+  components: ProductVariantComponent[];
   id: string;
   image: Image | null;
   price: Money;
+  /** True when the variant cannot be purchased without components (bundle parent). */
+  requiresComponents: boolean;
   selectedOptions: SelectedOption[];
+  title: string;
+}
+
+/** A bundle component: a referenced variant and how many of it the bundle includes. */
+export interface ProductVariantComponent {
+  quantity: number;
+  variant: ProductVariantReference;
+}
+
+/** Lightweight variant pointer used by bundle relationships (no price/availability). */
+export interface ProductVariantReference {
+  id: string;
+  image: Image | null;
+  product: {
+    featuredImage: Image | null;
+    handle: string;
+    id: string;
+    title: string;
+  };
   title: string;
 }
 
@@ -146,7 +171,6 @@ export interface Cart {
   cost: {
     subtotalAmount: Money;
     totalAmount: Money;
-    totalTaxAmount: Money;
   };
   discountAllocations: DiscountAllocation[];
   discountCodes: DiscountCode[];
@@ -158,6 +182,12 @@ export interface Cart {
 }
 
 export interface CartLine {
+  /** Shopify edit instruction — false for a fixed bundle's component lines. */
+  canRemove: boolean;
+  /** Shopify edit instruction — false for a fixed bundle's component lines. */
+  canUpdateQuantity: boolean;
+  /** Nested bundle component lines; empty for ordinary lines. */
+  components: CartLine[];
   cost: {
     totalAmount: Money;
   };

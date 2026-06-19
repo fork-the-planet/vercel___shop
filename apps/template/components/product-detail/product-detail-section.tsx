@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 
-import { BuyButtons } from "@/components/product-detail/buy-buttons";
+import { BundleComponents, BundleParents } from "@/components/product-detail/bundle-components";
+import { BuyButtons, type BuyButtonVariant } from "@/components/product-detail/buy-buttons";
 import {
   ProductInfoDescription,
   ProductInfoOptions,
@@ -225,7 +226,7 @@ async function ProductInfoArea({
 
       {eagerSelection ? (
         <BuyButtons
-          selectedVariant={eagerSelection.selectedVariant}
+          selectedVariant={toBuyButtonVariant(eagerSelection.selectedVariant)}
           title={title}
           handle={handle}
           featuredImage={featuredImage}
@@ -243,7 +244,29 @@ async function ProductInfoArea({
         </Suspense>
       )}
 
+      <BundleRelationships variant={product.defaultVariant} t={t} />
+
       <ProductInfoDescription descriptionHtml={descriptionHtml} />
+    </div>
+  );
+}
+
+// Bundle relationships are product-level (which products a bundle contains / which
+// bundles a product belongs to), so they render eagerly from the cached default
+// variant in the static shell rather than streaming in behind the variant query.
+function BundleRelationships({
+  variant,
+  t,
+}: {
+  variant: ProductVariant | undefined;
+  t: Awaited<ReturnType<typeof getTranslations<"product">>>;
+}) {
+  if (!variant) return null;
+  if (variant.components.length === 0 && variant.bundleParents.length === 0) return null;
+  return (
+    <div className="grid gap-5">
+      <BundleComponents components={variant.components} title={t("bundleIncludes")} />
+      <BundleParents variants={variant.bundleParents} title={t("availableInBundles")} />
     </div>
   );
 }
@@ -292,6 +315,21 @@ async function ResolvedProductInfoOptions({
   );
 }
 
+// Bundle relationship arrays stay server-side; the client buy controls only need
+// the gating boolean (a customized bundle parent has no fixed components to ship).
+function toBuyButtonVariant(variant: ProductVariant | undefined): BuyButtonVariant | undefined {
+  if (!variant) return undefined;
+  return {
+    availableForSale: variant.availableForSale,
+    id: variant.id,
+    image: variant.image,
+    price: variant.price,
+    requiresBundleConfiguration: variant.requiresComponents && variant.components.length === 0,
+    selectedOptions: variant.selectedOptions,
+    title: variant.title,
+  };
+}
+
 async function ResolvedBuyButtons({
   title,
   handle,
@@ -308,7 +346,7 @@ async function ResolvedBuyButtons({
   const selectedVariant = await variantPromise;
   return (
     <BuyButtons
-      selectedVariant={selectedVariant}
+      selectedVariant={toBuyButtonVariant(selectedVariant)}
       title={title}
       handle={handle}
       featuredImage={featuredImage}

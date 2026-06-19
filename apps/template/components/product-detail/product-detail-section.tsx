@@ -20,23 +20,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/lib/config";
 import type { Locale } from "@/lib/i18n";
 import {
-  computeSelection,
+  defaultSelectedOptions,
+  getSelectedColorImage,
   getSharedImages,
   hasColorImagePartitioning,
   hasUniformPricing,
   hasUniformStock,
-  type ProductSelection,
+  type SelectedOptions,
 } from "@/lib/product";
-import type { ProductDetails } from "@/lib/types";
+import { countEncodedVariants, getAvailableOptionValues } from "@/lib/shopify/encoded-variants";
+import type { ProductDetails, ProductVariant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function ProductDetailSection({
   product,
-  selectionPromise,
+  selectedOptionsPromise,
+  variantPromise,
   locale,
 }: {
   product: ProductDetails;
-  selectionPromise: Promise<ProductSelection>;
+  selectedOptionsPromise: Promise<SelectedOptions>;
+  variantPromise: Promise<ProductVariant | undefined>;
   locale: Locale;
 }) {
   return (
@@ -51,7 +55,7 @@ export function ProductDetailSection({
           manufacturerName: product.manufacturerName,
           currencyCode: product.currencyCode,
           priceRange: product.priceRange,
-          variants: product.variants,
+          offerCount: countEncodedVariants(product.encodedVariantExistence) || 1,
           availableForSale: product.availableForSale,
         }}
       />
@@ -62,8 +66,13 @@ export function ProductDetailSection({
         ]}
       />
       <div className="grid gap-10 lg:grid-cols-10 lg:items-start lg:gap-5">
-        <ProductMediaArea product={product} selectionPromise={selectionPromise} />
-        <ProductInfoArea product={product} selectionPromise={selectionPromise} locale={locale} />
+        <ProductMediaArea product={product} selectedOptionsPromise={selectedOptionsPromise} />
+        <ProductInfoArea
+          product={product}
+          selectedOptionsPromise={selectedOptionsPromise}
+          variantPromise={variantPromise}
+          locale={locale}
+        />
       </div>
     </>
   );
@@ -71,12 +80,12 @@ export function ProductDetailSection({
 
 function ProductMediaArea({
   product,
-  selectionPromise,
+  selectedOptionsPromise,
 }: {
   product: ProductDetails;
-  selectionPromise: Promise<ProductSelection>;
+  selectedOptionsPromise: Promise<SelectedOptions>;
 }) {
-  if (!hasColorImagePartitioning(product.options, product.variants)) {
+  if (!hasColorImagePartitioning(product.options)) {
     return (
       <ProductMedia
         otherImages={product.images}
@@ -89,13 +98,16 @@ function ProductMediaArea({
 
   return (
     <ProductMedia
-      otherImages={getSharedImages(product.images, product.options, product.variants)}
+      otherImages={getSharedImages(product.images, product.options)}
       videos={product.videos}
       title={product.title}
       className="lg:col-span-6"
       desktopSlot={
         <Suspense fallback={<Skeleton className="w-full rounded-none aspect-square" />}>
-          <ResolvedColorImageGrid title={product.title} selectionPromise={selectionPromise} />
+          <ResolvedColorImageGrid
+            product={product}
+            selectedOptionsPromise={selectedOptionsPromise}
+          />
         </Suspense>
       }
       mobileSlot={
@@ -106,7 +118,10 @@ function ProductMediaArea({
             </div>
           }
         >
-          <ResolvedColorImageCarousel title={product.title} selectionPromise={selectionPromise} />
+          <ResolvedColorImageCarousel
+            product={product}
+            selectedOptionsPromise={selectedOptionsPromise}
+          />
         </Suspense>
       }
     />
@@ -114,47 +129,51 @@ function ProductMediaArea({
 }
 
 async function ResolvedColorImageGrid({
-  title,
-  selectionPromise,
+  product,
+  selectedOptionsPromise,
 }: {
-  title: string;
-  selectionPromise: Promise<ProductSelection>;
+  product: ProductDetails;
+  selectedOptionsPromise: Promise<SelectedOptions>;
 }) {
-  const { colorImages } = await selectionPromise;
-  if (colorImages.length === 0) return null;
-  return <ColorImageGrid images={colorImages} title={title} />;
+  const image = getSelectedColorImage(product, await selectedOptionsPromise);
+  if (!image) return null;
+  return <ColorImageGrid images={[image]} title={product.title} />;
 }
 
 async function ResolvedColorImageCarousel({
-  title,
-  selectionPromise,
+  product,
+  selectedOptionsPromise,
 }: {
-  title: string;
-  selectionPromise: Promise<ProductSelection>;
+  product: ProductDetails;
+  selectedOptionsPromise: Promise<SelectedOptions>;
 }) {
-  const { colorImages } = await selectionPromise;
-  if (colorImages.length === 0) return null;
-  return <ColorImageCarouselItems images={colorImages} title={title} />;
+  const image = getSelectedColorImage(product, await selectedOptionsPromise);
+  if (!image) return null;
+  return <ColorImageCarouselItems images={[image]} title={product.title} />;
 }
 
 async function ProductInfoArea({
   product,
-  selectionPromise,
+  selectedOptionsPromise,
+  variantPromise,
   locale,
 }: {
   product: ProductDetails;
-  selectionPromise: Promise<ProductSelection>;
+  selectedOptionsPromise: Promise<SelectedOptions>;
+  variantPromise: Promise<ProductVariant | undefined>;
   locale: Locale;
 }) {
-  const { variants, options, handle, title, featuredImage, descriptionHtml, availableForSale } =
-    product;
+  const { options, handle, title, featuredImage, descriptionHtml, availableForSale } = product;
   const uniformPrice = hasUniformPricing(product.priceRange, product.compareAtPriceRange);
-  const uniformStock = hasUniformStock(variants);
-  const singleVariant = variants.length === 1;
-  const eagerSelection = singleVariant ? computeSelection(product, undefined) : null;
+  const uniformStock = hasUniformStock(product);
+  const singleVariant = countEncodedVariants(product.encodedVariantExistence) <= 1;
+  const availableValues = getAvailableOptionValues(options, product.encodedVariantAvailability);
+  const eagerSelection = singleVariant
+    ? { selectedOptions: defaultSelectedOptions(product), selectedVariant: product.defaultVariant }
+    : null;
   const t = await getTranslations("product");
   const buyFallbackT = uniformStock && !singleVariant ? t : null;
-  const allInStock = variants[0]?.availableForSale ?? true;
+  const allInStock = product.defaultVariant?.availableForSale ?? availableForSale;
 
   return (
     <div className="grid gap-10 lg:sticky lg:top-20 lg:col-span-4">
@@ -169,14 +188,14 @@ async function ProductInfoArea({
           />
         ) : (
           <Suspense fallback={<div className="h-6" aria-hidden />}>
-            <ResolvedProductPrice selectionPromise={selectionPromise} locale={locale} />
+            <ResolvedProductPrice variantPromise={variantPromise} locale={locale} />
           </Suspense>
         )}
       </div>
 
       {eagerSelection ? (
         <ProductInfoOptions
-          variants={variants}
+          availableValues={availableValues}
           options={options}
           selectedOptions={eagerSelection.selectedOptions}
           handle={handle}
@@ -186,7 +205,7 @@ async function ProductInfoArea({
         <Suspense
           fallback={
             <ProductInfoOptions
-              variants={variants}
+              availableValues={availableValues}
               options={options}
               selectedOptions={{}}
               handle={handle}
@@ -196,10 +215,10 @@ async function ProductInfoArea({
           }
         >
           <ResolvedProductInfoOptions
-            variants={variants}
+            availableValues={availableValues}
             options={options}
             handle={handle}
-            selectionPromise={selectionPromise}
+            selectedOptionsPromise={selectedOptionsPromise}
             t={t}
           />
         </Suspense>
@@ -220,7 +239,7 @@ async function ProductInfoArea({
             handle={handle}
             featuredImage={featuredImage}
             availableForSale={availableForSale}
-            selectionPromise={selectionPromise}
+            variantPromise={variantPromise}
           />
         </Suspense>
       )}
@@ -231,13 +250,13 @@ async function ProductInfoArea({
 }
 
 async function ResolvedProductPrice({
-  selectionPromise,
+  variantPromise,
   locale,
 }: {
-  selectionPromise: Promise<ProductSelection>;
+  variantPromise: Promise<ProductVariant | undefined>;
   locale: Locale;
 }) {
-  const { selectedVariant } = await selectionPromise;
+  const selectedVariant = await variantPromise;
   if (!selectedVariant) return null;
   return (
     <ProductPrice
@@ -250,22 +269,22 @@ async function ResolvedProductPrice({
 }
 
 async function ResolvedProductInfoOptions({
-  variants,
+  availableValues,
   options,
   handle,
-  selectionPromise,
+  selectedOptionsPromise,
   t,
 }: {
-  variants: ProductDetails["variants"];
+  availableValues: Map<string, Set<string>>;
   options: ProductDetails["options"];
   handle: string;
-  selectionPromise: Promise<ProductSelection>;
+  selectedOptionsPromise: Promise<SelectedOptions>;
   t: Awaited<ReturnType<typeof getTranslations<"product">>>;
 }) {
-  const { selectedOptions } = await selectionPromise;
+  const selectedOptions = await selectedOptionsPromise;
   return (
     <ProductInfoOptions
-      variants={variants}
+      availableValues={availableValues}
       options={options}
       selectedOptions={selectedOptions}
       handle={handle}
@@ -279,15 +298,15 @@ async function ResolvedBuyButtons({
   handle,
   featuredImage,
   availableForSale,
-  selectionPromise,
+  variantPromise,
 }: {
   title: string;
   handle: string;
   featuredImage: ProductDetails["featuredImage"];
   availableForSale: boolean;
-  selectionPromise: Promise<ProductSelection>;
+  variantPromise: Promise<ProductVariant | undefined>;
 }) {
-  const { selectedVariant } = await selectionPromise;
+  const selectedVariant = await variantPromise;
   return (
     <BuyButtons
       selectedVariant={selectedVariant}

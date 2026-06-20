@@ -77,6 +77,12 @@ These are product-level facts (which products a bundle contains / which bundles 
 
 A customized bundle parent (`requiresComponents` with no fixed `components`) disables the buy buttons with a "Choose bundle items" label, since the generic storefront can't configure it. The bundle relationship arrays stay server-side; `BuyButtons` receives only a `requiresBundleConfiguration` boolean.
 
+### Complementary products
+
+`complementary-products.tsx` renders the merchant-curated "Pairs well with" set below the bundle relationships — Shopify's [complementary products](/docs/shopify/pdp#complementary-products) from `productRecommendations(intent: COMPLEMENTARY)`. These are distinct from the algorithmic related products below the fold (`intent: RELATED`): complementary products are deliberately chosen add-ons, so they sit beside the buy section like bundle relationships rather than in the footer grid.
+
+Like bundle relationships, the section renders **eagerly into the prerendered shell** rather than streaming. `getComplementaryProducts()` is a cached (`use cache: remote`) operation, so its result is baked into the static PPR/ISR document — there's no skeleton fallback and no layout shift on cached hits (a `Suspense` boundary would instead make it a streamed hole). It shows up to four products as thumbnail + title + price rows and renders nothing when none are configured.
+
 ## Related Products
 
 Below the product details, a `RelatedProductsSection` component fetches related products from Shopify's recommendation API. It renders inside a `Suspense` boundary with a skeleton grid fallback.

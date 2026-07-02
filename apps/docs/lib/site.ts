@@ -2,7 +2,8 @@ export const siteName = "Vercel Shop";
 
 export const homeTitle = "Production-ready Shopify storefront on Next.js";
 
-export const homeSubtitle = "Customize everything with AI agents";
+export const homeSubtitle =
+  "Commerce for the agentic era. Fast by default and built to be customized.";
 
 export const homeDescription = `${homeTitle} ${homeSubtitle}`;
 

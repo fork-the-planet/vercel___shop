@@ -1,4 +1,3 @@
-import "server-only";
 import { createStorefrontApiClient } from "@shopify/storefront-api-client";
 
 interface CustomRequestInit {
@@ -41,6 +40,7 @@ const customFetchApi = async (url: string, init?: CustomRequestInit): Promise<Re
   return response;
 };
 
+// No `server-only` guard: the Storefront token is public, so the eve agent runtime can import this client directly.
 export const storefront = createStorefrontApiClient({
   apiVersion: SHOPIFY_API_VERSION,
   customFetchApi,

@@ -480,6 +480,33 @@ export async function fetchCart(cartId: string): Promise<Cart | undefined> {
   return response.data.cart ? transformShopifyCart(response.data.cart) : undefined;
 }
 
+const NODE_HANDLES_QUERY = `#graphql
+  query nodeHandles($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Product {
+        id
+        handle
+      }
+    }
+  }
+` as const;
+
+// Resolves product GIDs to storefront handles (e.g. to route MCP catalog results on-site).
+export async function fetchProductHandlesByIds(ids: string[]): Promise<Map<string, string>> {
+  const handles = new Map<string, string>();
+  if (ids.length === 0) return handles;
+
+  const response = await storefront.request<{
+    nodes: Array<{ handle: string; id: string } | null>;
+  }>(NODE_HANDLES_QUERY, { variables: { ids } });
+  assertStorefrontOk(response, "nodeHandles");
+
+  for (const node of response.data.nodes) {
+    if (node?.id && node.handle) handles.set(node.id, node.handle);
+  }
+  return handles;
+}
+
 export async function createCartCore(locale: string = defaultLocale): Promise<CartMutationResult> {
   const country = getCountryCode(locale);
   const language = getLanguageCode(locale);

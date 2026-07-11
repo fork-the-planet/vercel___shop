@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { getCartIdFromCookie, invalidateCartCache, setCartIdCookie } from "@/lib/cart/server";
 import { defaultLocale, getCountryCode, getLanguageCode } from "@/lib/i18n";
 import type { Cart } from "@/lib/types";
@@ -131,10 +133,15 @@ const CART_DELIVERY_ADDRESSES_UPDATE_MUTATION = `#graphql
   }
 ` as const;
 
-export async function getCart(cartId?: string): Promise<Cart | undefined> {
-  const resolvedCartId = cartId ?? (await getCartIdFromCookie());
-  if (!resolvedCartId) return undefined;
-  return fetchCart(resolvedCartId);
+/** Request-deduped via React.cache so every server boundary in a render shares one fetch. */
+export const getCart = cache(async (): Promise<Cart | undefined> => {
+  const cartId = await getCartIdFromCookie();
+  if (!cartId) return undefined;
+  return getCartById(cartId);
+});
+
+export async function getCartById(cartId: string): Promise<Cart | undefined> {
+  return fetchCart(cartId);
 }
 
 /**

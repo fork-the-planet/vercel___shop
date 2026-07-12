@@ -27,10 +27,11 @@ import {
   type SearchIndexProductsResult,
 } from "../fetch";
 import {
+  BUNDLE_RELATIONSHIPS_FRAGMENT,
   IMAGE_FRAGMENT,
-  METAFIELD_FRAGMENT,
   PRODUCT_CARD_FRAGMENT,
   PRODUCT_FRAGMENT,
+  PRODUCT_VARIANT_FRAGMENT,
   PRODUCT_WITH_VARIANTS_FRAGMENT,
   PURCHASABLE_PRODUCT_VARIANT_FRAGMENT,
 } from "../fragments";
@@ -78,15 +79,14 @@ const GET_PRODUCT_BY_HANDLE_QUERY = `#graphql
   }
 ` as const;
 
-// Metafield identifiers stay variables so the document remains codegen-validatable.
-const GET_PRODUCT_BY_HANDLE_WITH_METAFIELDS_QUERY = `#graphql
-  ${METAFIELD_FRAGMENT}
+const GET_PRODUCT_BY_HANDLE_WITH_BUNDLES_QUERY = `#graphql
+  ${BUNDLE_RELATIONSHIPS_FRAGMENT}
   ${PRODUCT_FRAGMENT}
-  query getProductByHandleWithMetafields($handle: String!, $metafieldIdentifiers: [HasMetafieldsIdentifier!]!, $country: CountryCode, $language: LanguageCode) @inContext(country: $country, language: $language) {
+  query getProductByHandleWithBundles($handle: String!, $country: CountryCode, $language: LanguageCode) @inContext(country: $country, language: $language) {
     productByHandle(handle: $handle) {
       ...ProductFields
-      metafields(identifiers: $metafieldIdentifiers) {
-        ...MetafieldFields
+      selectedOrFirstAvailableVariant {
+        ...BundleRelationshipFields
       }
     }
   }
@@ -105,21 +105,14 @@ export async function getProduct({
   const country = getCountryCode(locale);
   const language = getLanguageCode(locale);
 
-  const response = shopConfig.pdp.specifications.metafields.length
-    ? await storefront.request<{ productByHandle: ShopifyProduct }>(
-        GET_PRODUCT_BY_HANDLE_WITH_METAFIELDS_QUERY,
-        {
-          variables: {
-            handle,
-            metafieldIdentifiers: shopConfig.pdp.specifications.metafields,
-            country,
-            language,
-          },
-        },
-      )
-    : await storefront.request<{ productByHandle: ShopifyProduct }>(GET_PRODUCT_BY_HANDLE_QUERY, {
-        variables: { handle, country, language },
-      });
+  const response = await storefront.request<{ productByHandle: ShopifyProduct }>(
+    shopConfig.pdp.bundles.enabled
+      ? GET_PRODUCT_BY_HANDLE_WITH_BUNDLES_QUERY
+      : GET_PRODUCT_BY_HANDLE_QUERY,
+    {
+      variables: { handle, country, language },
+    },
+  );
   assertStorefrontOk(response, "getProductByHandle");
   const { data } = response;
 
@@ -134,8 +127,20 @@ export async function getProduct({
 
 const GET_PRODUCT_VARIANT_QUERY = `#graphql
   ${IMAGE_FRAGMENT}
-  ${PURCHASABLE_PRODUCT_VARIANT_FRAGMENT}
+  ${PRODUCT_VARIANT_FRAGMENT}
   query getProductVariant($handle: String!, $selectedOptions: [SelectedOptionInput!]!, $country: CountryCode, $language: LanguageCode) @inContext(country: $country, language: $language) {
+    productByHandle(handle: $handle) {
+      selectedOrFirstAvailableVariant(selectedOptions: $selectedOptions, ignoreUnknownOptions: true, caseInsensitiveMatch: true) {
+        ...ProductVariantFields
+      }
+    }
+  }
+` as const;
+
+const GET_PRODUCT_VARIANT_WITH_BUNDLES_QUERY = `#graphql
+  ${IMAGE_FRAGMENT}
+  ${PURCHASABLE_PRODUCT_VARIANT_FRAGMENT}
+  query getProductVariantWithBundles($handle: String!, $selectedOptions: [SelectedOptionInput!]!, $country: CountryCode, $language: LanguageCode) @inContext(country: $country, language: $language) {
     productByHandle(handle: $handle) {
       selectedOrFirstAvailableVariant(selectedOptions: $selectedOptions, ignoreUnknownOptions: true, caseInsensitiveMatch: true) {
         ...PurchasableProductVariantFields
@@ -162,9 +167,14 @@ export async function getProductVariant({
 
   const response = await storefront.request<{
     productByHandle: { selectedOrFirstAvailableVariant: ShopifyVariant | null } | null;
-  }>(GET_PRODUCT_VARIANT_QUERY, {
-    variables: { handle, selectedOptions, country, language },
-  });
+  }>(
+    shopConfig.pdp.bundles.enabled
+      ? GET_PRODUCT_VARIANT_WITH_BUNDLES_QUERY
+      : GET_PRODUCT_VARIANT_QUERY,
+    {
+      variables: { handle, selectedOptions, country, language },
+    },
+  );
   assertStorefrontOk(response, "getProductVariant");
   const { data } = response;
 

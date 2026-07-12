@@ -1,26 +1,5 @@
 import type { MenuItem } from "@/lib/shopify/types/menu";
 
-export type AgentToolName =
-  | "addCartNote"
-  | "addToCart"
-  | "browseCollection"
-  | "getCart"
-  | "getCatalogProduct"
-  | "getProductDetails"
-  | "getProductRecommendations"
-  | "listCollections"
-  | "navigateUser"
-  | "removeFromCart"
-  | "searchCatalog"
-  | "searchProducts"
-  | "searchShopPoliciesAndFaqs"
-  | "updateCartItemQuantity";
-
-export interface MetafieldIdentifier {
-  key: string;
-  namespace: string;
-}
-
 export type SocialPlatform =
   | "facebook"
   | "github"
@@ -39,9 +18,6 @@ export interface SocialLink {
 export interface ShopConfig {
   agent: {
     enabled: boolean;
-    maxSteps: number;
-    model: string;
-    tools: AgentToolName[];
   };
   analytics: {
     speedInsights: {
@@ -64,14 +40,9 @@ export interface ShopConfig {
     };
     complementaryProducts: {
       enabled: boolean;
-      limit: number;
     };
     relatedProducts: {
       enabled: boolean;
-      limit: number;
-    };
-    specifications: {
-      metafields: MetafieldIdentifier[];
     };
   };
   site: {
@@ -96,24 +67,6 @@ const defaultUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
 export const shopConfig = {
   agent: {
     enabled: envFlag(process.env.NEXT_PUBLIC_ENABLE_AGENT, false),
-    maxSteps: 10,
-    model: "google/gemini-3.5-flash",
-    tools: [
-      "addCartNote",
-      "addToCart",
-      "browseCollection",
-      "getCart",
-      "getCatalogProduct",
-      "getProductDetails",
-      "getProductRecommendations",
-      "listCollections",
-      "navigateUser",
-      "removeFromCart",
-      "searchCatalog",
-      "searchProducts",
-      "searchShopPoliciesAndFaqs",
-      "updateCartItemQuantity",
-    ],
   },
   analytics: {
     speedInsights: {
@@ -140,18 +93,13 @@ export const shopConfig = {
   },
   pdp: {
     bundles: {
-      enabled: true,
+      enabled: false,
     },
     complementaryProducts: {
-      enabled: true,
-      limit: 4,
+      enabled: false,
     },
     relatedProducts: {
-      enabled: true,
-      limit: 4,
-    },
-    specifications: {
-      metafields: [],
+      enabled: false,
     },
   },
   site: {

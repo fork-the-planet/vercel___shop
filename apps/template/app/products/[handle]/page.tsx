@@ -129,11 +129,7 @@ export default async function ProductPage({
             locale={locale}
           />
           {shopConfig.pdp.relatedProducts.enabled ? (
-            <RelatedProductsSection
-              handle={handle}
-              limit={shopConfig.pdp.relatedProducts.limit}
-              locale={locale}
-            />
+            <RelatedProductsSection handle={handle} limit={4} locale={locale} />
           ) : null}
         </Sections>
       </Container>

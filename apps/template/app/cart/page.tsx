@@ -71,7 +71,7 @@ async function CartContent({ locale }: { locale: Locale }) {
                 cart.lines[0]?.merchandise.product.handle ? (
                   <RelatedProductsSection
                     handle={cart.lines[0].merchandise.product.handle}
-                    limit={shopConfig.pdp.relatedProducts.limit}
+                    limit={4}
                     locale={locale}
                   />
                 ) : null}

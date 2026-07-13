@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { BundleComponents, BundleParents } from "@/components/product-detail/bundle-components";
 import { BuyButtons, type BuyButtonVariant } from "@/components/product-detail/buy-buttons";
+import { BuyWithShopLogo } from "@/components/product-detail/buy-with-shop-logo";
 import { ComplementaryProducts } from "@/components/product-detail/complementary-products";
 import { ProductOpenGraph } from "@/components/product-detail/open-graph";
 import {
@@ -17,7 +18,6 @@ import {
 } from "@/components/product-detail/product-media";
 import { ProductPrice } from "@/components/product-detail/product-price";
 import { ProductSchema } from "@/components/product-detail/schema";
-import { ShopLogo } from "@/components/product-detail/shop-logo";
 import { BreadcrumbSchema } from "@/components/schema/breadcrumb-schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/lib/i18n";
@@ -237,6 +237,8 @@ async function ProductInfoArea({
           handle={handle}
           featuredImage={featuredImage}
           availableForSale={availableForSale}
+          buyWithShop={shopConfig.pdp.buyWithShop.enabled}
+          quantityPicker={shopConfig.pdp.quantityPicker.enabled}
         />
       ) : (
         <Suspense fallback={<BuyButtonsFallback t={buyFallbackT} allInStock={allInStock} />}>
@@ -245,6 +247,8 @@ async function ProductInfoArea({
             handle={handle}
             featuredImage={featuredImage}
             availableForSale={availableForSale}
+            buyWithShop={shopConfig.pdp.buyWithShop.enabled}
+            quantityPicker={shopConfig.pdp.quantityPicker.enabled}
             variantPromise={variantPromise}
           />
         </Suspense>
@@ -340,16 +344,20 @@ function toBuyButtonVariant(variant: ProductVariant | undefined): BuyButtonVaria
 }
 
 async function ResolvedBuyButtons({
-  title,
-  handle,
-  featuredImage,
   availableForSale,
+  buyWithShop,
+  featuredImage,
+  handle,
+  quantityPicker,
+  title,
   variantPromise,
 }: {
-  title: string;
-  handle: string;
-  featuredImage: ProductDetails["featuredImage"];
   availableForSale: boolean;
+  buyWithShop: boolean;
+  featuredImage: ProductDetails["featuredImage"];
+  handle: string;
+  quantityPicker: boolean;
+  title: string;
   variantPromise: Promise<ProductVariant | undefined>;
 }) {
   const selectedVariant = await variantPromise;
@@ -360,39 +368,56 @@ async function ResolvedBuyButtons({
       handle={handle}
       featuredImage={featuredImage}
       availableForSale={availableForSale}
+      buyWithShop={buyWithShop}
+      quantityPicker={quantityPicker}
     />
   );
 }
 
 function BuyButtonsFallback({
-  t,
   allInStock,
+  t,
 }: {
-  t: Awaited<ReturnType<typeof getTranslations<"product">>> | null;
   allInStock: boolean;
+  t: Awaited<ReturnType<typeof getTranslations<"product">>> | null;
 }) {
   if (!t) {
     return (
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="h-12 rounded-lg bg-shop" />
-        <div className="h-12 rounded-lg bg-primary" />
+      <div className="grid gap-2.5">
+        <div className="flex gap-2.5">
+          {shopConfig.pdp.quantityPicker.enabled ? (
+            <div className="h-12 w-32 rounded-lg border bg-background" />
+          ) : null}
+          <div className="h-12 flex-1 rounded-lg bg-primary" />
+        </div>
+        {shopConfig.pdp.buyWithShop.enabled ? <div className="h-12 rounded-lg bg-shop" /> : null}
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-2.5">
-      <div
-        className={cn(
-          "flex items-center justify-center gap-1.5 rounded-lg h-12 bg-shop text-white",
-          !allInStock && "invisible",
-        )}
-      >
-        <span className="text-sm font-medium">{t("buyWithShop")}</span>
-        <ShopLogo className="h-4 w-auto" />
+    <div className="grid gap-2.5">
+      <div className="flex gap-2.5">
+        {shopConfig.pdp.quantityPicker.enabled ? (
+          <div className="flex h-12 w-32 items-center justify-between rounded-lg border bg-background px-4 text-sm font-medium">
+            <span aria-hidden>−</span>
+            <span>1</span>
+            <span aria-hidden>+</span>
+          </div>
+        ) : null}
+        <div className="flex h-12 min-w-0 flex-1 items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground">
+          {allInStock ? t("addToCart") : t("outOfStock")}
+        </div>
       </div>
-      <div className="flex items-center justify-center rounded-lg h-12 bg-primary text-primary-foreground text-sm font-medium">
-        {allInStock ? t("addToCart") : t("outOfStock")}
-      </div>
+      {shopConfig.pdp.buyWithShop.enabled ? (
+        <div
+          className={cn(
+            "flex h-12 items-center justify-center rounded-lg bg-shop px-4 text-white",
+            !allInStock && "invisible",
+          )}
+        >
+          <BuyWithShopLogo aria-hidden="true" className="h-auto w-32.75" />
+        </div>
+      ) : null}
     </div>
   );
 }

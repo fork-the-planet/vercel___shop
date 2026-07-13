@@ -61,12 +61,12 @@ Because selection is option-driven, the gallery no longer filters out _every_ im
 
 ## Buy section
 
-The buy section includes stock status and two action buttons:
+The buy section uses two 48 px rows with a 10 px gap:
 
-- **Buy with Shop** - creates a Shopify checkout and redirects to it, styled per [Shopify's brand guidelines](https://help.shopify.com/en/manual/payments/shop-pay/assets)
-- **Add to Cart** - adds the item optimistically to the cart drawer
+- **Quantity and Add to Cart** - a 1–99 quantity picker sits beside the cart action, which fills the remaining width. Minus disables at 1, plus disables at 99, and the selected quantity is added optimistically to the cart.
+- **Buy with Shop** - creates a Shopify checkout for the selected quantity and redirects to it, using Shopify's official [Buy with Shop lock-up](https://help.shopify.com/en/manual/payments/shop-pay/assets) in its approved all-white treatment on Shop purple.
 
-A single `BuyButtons` component renders identically on both mobile and desktop. It receives the `selectedVariant` as a prop and is a client component for cart interactivity.
+A single `BuyButtons` component renders identically on both mobile and desktop. It receives the `selectedVariant` as a prop and is a client component for cart interactivity. `pdp.quantityPicker.enabled` and `pdp.buyWithShop.enabled` both default to `true`; set either to `false` in `shop.config.ts` to hide that control.
 
 ### Bundles
 

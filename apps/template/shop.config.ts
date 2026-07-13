@@ -38,7 +38,13 @@ export interface ShopConfig {
     bundles: {
       enabled: boolean;
     };
+    buyWithShop: {
+      enabled: boolean;
+    };
     complementaryProducts: {
+      enabled: boolean;
+    };
+    quantityPicker: {
       enabled: boolean;
     };
     relatedProducts: {
@@ -95,7 +101,13 @@ export const shopConfig = {
     bundles: {
       enabled: true,
     },
+    buyWithShop: {
+      enabled: true,
+    },
     complementaryProducts: {
+      enabled: true,
+    },
+    quantityPicker: {
       enabled: true,
     },
     relatedProducts: {
